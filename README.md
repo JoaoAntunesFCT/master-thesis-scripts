@@ -23,15 +23,6 @@ verified where.
 
 ## Repository structure
 
-The `MATLAB/` and `FPGA/` folders mirror the same block breakdown, numbered
-so the MATLAB model and its RTL counterpart for a given block sit in
-correspondingly-named folders. A third folder, `Digital_Synthesis/`, holds
-the ASIC synthesis and verification flow (Design Compiler, Formality,
-SpyGlass) that consumes the RTL from `FPGA/07_complete_chain`. A fourth
-folder, `Schematics/`, holds the Vivado schematic exports (elaboration /
-synthesis / implementation phases) for each block, referenced by the
-thesis — see [Schematics](#schematics) below.
-
 ```
 .
 ├-- Matlab/
