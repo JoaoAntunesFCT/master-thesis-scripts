@@ -7,19 +7,7 @@ synchronization, GMSK demodulation, and packet-level error detection/
 correction, developed and cross-checked in MATLAB and implemented in
 Verilog/SystemVerilog RTL.
 
-The receiver was brought up and validated on a Nexys A7-100T (Artix-7) FPGA,
-and is separately targeted for digital synthesis (Design Compiler, SAED14 /
-Sky130 / IHP130 PDKs) for the ASIC-oriented part of the thesis. The design
-was originally dimensioned assuming one ADC sample per clock edge at
-100 MHz; it was later discovered that the ADC actually delivers 10 MS/s (the
-Nexys A7's 100 MHz board oscillator had been mistaken for the ADC sample
-rate). The chain was re-clocked to 10 MHz to match - **this corrected
-10 MHz / decimation-10 configuration is the one carried into both the final
-full-chain FPGA bring-up and the ASIC synthesis flow**; the original
-100 MHz / decimation-12 configuration survives only in the early, per-block
-FPGA validation and as a comparison baseline. See
-[Status & validation](#status--validation) below for exactly what has been
-verified where.
+The receiver was brought up and validated on a Nexys A7-100T (Artix-7) FPGA, and is separately targeted for digital synthesis (Design Compiler, SAED14 / Sky130 / IHP130 PDKs) for the ASIC-oriented part of the thesis. The design was first brought up on the FPGA at the board's native 100 MHz debug clock, taking one ADC sample per clock edge as a simplifying assumption for early validation, since the ADC's true throughput is 10 MS/s. Once FPGA validation was complete, the chain was re-clocked to 10 MHz to match the ADC — a low-risk step, since it only meant slowing the design down rather than tightening its timing. This 10 MHz / decimation-10 configuration is the one carried into both the final full-chain FPGA bring-up and the ASIC synthesis flow, while the earlier 100 MHz / decimation-12 configuration survives only as the early, per-block FPGA bring-up baseline.
 
 ## Repository structure
 
@@ -153,108 +141,6 @@ verified where.
         ├-- sch_synthesis.pdf
         └-- sch_implementation.pdf
 ```
-
-
-## Block descriptions
-
-| Block | RTL | Description |
-|---|---|---|
-| ADC front-end | `adc_format_aligner.v` | Aligns/sign-extends the raw ADC bus for a configurable ADC resolution (7–10 bit). |
-| IQ corrector | `iq_corrector_ll_lms.sv` | Leaky-integrator DC blocker + adaptive log-log LMS phase/gain imbalance correction, with a gear-shifted (coarse → tracking) step size and an integrate-and-dump fault detector. |
-| DDC | `ddc_frontend_top.v`, `ddc_nco_cmix.v`, `ddc_fs4_mixer.v`, `cic_decimator_4th_order.v`, `fir_csd_filter.v` | 24-bit NCO + complex mixer (selectable vs. a fixed-Fs/4 mixer), 4th-order CIC decimator, and a compensating CSD-encoded FIR channel filter. |
-| Sync | `trex1_sync_hw_top.v`, `trex1_ff_agc.v`, `trex1_cfo_top.v`, `trex1_cfo_derotate.v`, `trex1_blue_autocorr.v`, `trex1_str_top.v` | Feed-forward AGC (windowed power estimate, coarse power-of-two gain steps), CFO estimation (lag-1 coarse autocorrelation, lag-1-symbol BLUE fine estimator) and CORDIC-based derotation, and a self-contained interpolating Gardner symbol-timing-recovery loop (linear interpolation). |
-| GMSK demodulator | `trex1_gmsk_demod.v` | Cross-product (differential) frequency discriminator with a hard-decision slicer. |
-| Packet engine | `trex1_packet_engine_top.v`, `trex1_pe_datapath.v`, `syndrome_lut.v` | PN9 de-whitening, bit-serial CRC-16, and single-bit error correction via a syndrome lookup table. |
-| Complete chain | `trex1_rx_frontend_top.v` + FPGA bring-up harness | Top-level integration of every block above, plus the FPGA test wrapper and ILA stimulus playback used for hardware bring-up. In the latest full-chain capture the packet engine's `pe_enable` is held low, so the I/Q corrector → DDC → sync → GMSK discriminator path is exercised end-to-end on hardware while the packet engine itself is verified separately at block level. |
-
-## Digital synthesis & verification
-
-`Digital_Synthesis/` targets the same RTL top (`trex1_rx_frontend_top`)
-across three ASIC PDKs - a generic/SAED14 educational reference, SkyWater
-Sky130, and IHP SG13G2 (130 nm) - using a common flow, at the corrected
-10 MHz (100 ns period) rate:
-
-- **`synthesis/`** - Design Compiler multicorner synthesis scripts, one per
-  PDK. All three synthesize the same golden RTL and close setup/hold with
-  zero negative slack; formal equivalence compare-point counts land in the
-  same ~19,1xx range (19,112 / 19,112 / 19,118), with the small delta
-  attributable to library/mapping differences rather than the RTL itself.
-- **`verification/`** - Formality RTL-vs-gate equivalence checking, one
-  script per PDK, using DC's SVF guidance to reconcile synthesis-introduced
-  register merges/inversions. As the scripts themselves note, equivalence
-  proves netlist == RTL; it does **not** prove that rate-dependent constants
-  (CIC output shift, NCO `fcw`, decimation rate) are the functionally
-  *correct* values for the target clock - that's covered separately by
-  simulation (the `tb_rx_chain_model.m` cross-check and the 10 MS/s
-  functional regression), not by equivalence checking.
-- **`constraints/`** - `baseband.sdc` (Design Compiler timing: 10 MHz,
-  multicycle exceptions, I/O delays) and `baseband.sgdc` (SpyGlass CDC/RDC
-  clock-and-reset facts).
-- **`waivers/`** - SpyGlass lint and CDC rule waivers, each with a written
-  justification for why the flagged pattern is intentional/safe.
-
-> **Known constraint inconsistency:** `baseband.sdc`'s header states it was
-> updated to a 10 MHz / 100 ns clock period and that this is "numerically
-> identical" to `baseband.sgdc`'s definition. As currently committed,
-> `baseband.sgdc` still defines `clock -name clk -period 10.000` (i.e.
-> 10 ns / 100 MHz) - it was not actually updated to match. SpyGlass CDC
-> runs against the current `baseband.sgdc` are therefore checking the
-> 100 MHz clock definition, not 10 MHz. Worth reconciling before relying on
-> a SpyGlass CDC sign-off for the 10 MHz configuration.
-
-## Schematics
-
-`Schematics/` holds the Vivado schematic PDFs for each block across the
-three implementation phases - elaboration, synthesis, and implementation -
-mirroring the block numbering used in `FPGA/`. These are the full-resolution
-originals: the copies embedded in the thesis PDF are cropped to their
-content and scaled to fit the page format, so the versions here are the
-ones to use for closely inspecting any specific net or cell. There is no
-schematic subfolder for `01_adc_frontend`, since that block was not given
-its own schematic annex in the thesis.
-
-## MATLAB models
-
-- **`rx_chain_model.m`** - floating-point behavioural model of the full
-  chain, ported directly from the RTL (exact FIR/CIC scaling, exact PN9/
-  CRC-16 polynomials, the full syndrome LUT, and the IQ corrector's DC-
-  blocker silence-squelch fix). See the file header for the documented
-  scope: double-precision arithmetic, multi-cycle pipeline latencies
-  collapsed to their algorithmic equivalent, and two RTL bit-slice quirks
-  (the DDC→sync width truncation and the CIC's fixed output shift)
-  reproduced exactly rather than approximated, since those materially
-  affect the signal's shape, not just its timing.
-- **`tb_rx_chain_model.m`** - builds a continuous-tone, I/Q-imbalance-
-  injected stimulus (mirroring the FPGA test wrapper's calibration bench)
-  and runs it through both:
-  - the **100 MHz / decimation-12 configuration** (the original,
-    pre-correction assumption, used for early per-block validation), and
-  - the **10 MHz / decimation-10 configuration** (the corrected rate,
-    carried into the final full-chain bring-up and the ASIC flow),
-- producing two independent 5-figure sets (`matlab_*.png` and
-  `matlab_10mhz_*.png`) for visual comparison against Vivado ILA captures
-  and against each other.
-
-Run with either MATLAB or GNU Octave (validated on Octave 8.4):
-
-```matlab
-tb_rx_chain_model
-```
-
-## Status & validation
-
-| Configuration | Clock | Decimation | Validation |
-|---|---|---|---|
-| Per-block FPGA implementation (Nexys A7-100T) | 100 MHz debug clock | up to 12, block-specific (original, pre-correction assumption) | Hardware-validated per block via ILA/VIO captures, including the bring-up fixes (symbol-timing-recovery rewrite, packet-engine bit-rate gating, stimulus/ROM fixes, IQ-corrector DC-blocker fix). |
-| Full-chain FPGA build (Nexys A7-100T) | 10 MHz (corrected) | 10 | Hardware-validated end-to-end: the I/Q corrector → DDC → sync → GMSK discriminator path produces a continuous, valid recovered-bit stream under the corrected clocking. The packet engine's `pe_enable` is held low in this capture, so it is not exercised end-to-end here; its correctness is established separately at block level. One integration item remains open: the packet engine's bit-counting window alignment against the stimulus ROM in the merged build. |
-| ASIC synthesis target | 10 MHz | 10 | Synthesised (Design Compiler / SAED14 / Sky130 / IHP130); formally verified (Formality) against the same golden RTL across all three; cross-checked by a dedicated 10 MS/s functional simulation regression. Not yet placed-and-routed or taped out. |
-
-The 10 MHz configuration is architecturally identical to the 100 MHz one
-but numerically distinct (different decimation rate and calibration timing
-constants). It is the one actually carried forward: the full-chain FPGA
-bring-up and the ASIC synthesis target both use it, and the MATLAB model
-under this configuration is a simulation cross-check for both, not merely
-for the synthesis run in isolation.
 
 ## Requirements
 
