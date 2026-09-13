@@ -1,0 +1,75 @@
+##################################################################################
+# Company:        NOVA SST
+# Engineer:       Joao Reis Antunes
+# 
+# Create Date:    07/2026 (mm-yyyy)
+# Module Name:    lint_rtl_waivers.swl
+# Project Name:   TREX1 Digital Baseband Chain
+# Target Devices: Technology-independent (pre-synthesis RTL lint check)
+# Description:    SpyGlass lint waiver file: waives known-safe STARC/W-rule findings (single-process FSM style, default-then-override sequential assignments, intentional async-reset use, unconnected/unread debug signals) across the RTL modules.
+# 
+# Dependencies:   The CDC-specific Reset_sync04 waiver is intentionally NOT here -- see cdc_waivers.swl. Loaded by the SpyGlass lint project.
+# 
+##################################################################################
+
+################################################################################
+# SpyGlass Lint Waiver File -- trex1_rx_frontend_top
+# Syntax: SpyGlass .swl format (waive -rule -du -comment)
+################################################################################
+# 1. FSM single-process style (STARC05-2.11.3.1)
+#    Intentional single-process FSM -- functionally correct, team convention.
+waive -rule STARC05-2.11.3.1 -du trex1_rx_frontend_top -comment "Intentional single-process FSM style for bit_count"
+waive -rule STARC05-2.11.3.1 -du iq_corrector_ll_lms -comment "Intentional single-process FSM style for calib_phase"
+
+
+# 2. Default-then-override sequential assignments (STARC05-2.2.3.3)
+#    Register assigned default hold value then conditionally overridden.
+#    Standard safe RTL pattern -- no latch risk, synthesises correctly.
+waive -rule STARC05-2.2.3.3 -du trex1_rx_frontend_top -comment "Default-then-override pattern for bit_count and pe_enable"
+waive -rule STARC05-2.2.3.3 -du iq_corrector_ll_lms -comment "Default-then-override pattern for cooldown_cnt, fault_acc, fault_strong_cnt"
+
+
+# 3. Multiple assignments in same always block (W415a)
+#    Same default-then-override pattern as above.
+waive -rule W415a -du trex1_rx_frontend_top -comment "Default-then-override pattern for pe_enable and bit_count"
+waive -rule W415a -du iq_corrector_ll_lms -comment "Default-then-override pattern for cooldown_cnt, raw_dp, dg, fault_acc, fault_strong_cnt"
+waive -rule W415a -du trex1_packet_engine_top -comment "Default-then-override pattern for clean_payload_out bit-correction"
+
+
+# 4. Async reset used as non-reset (STARC05-1.3.1.3)
+#    rst_n gates is_tracking enable path -- safe, fully synchronous, glitch-free reset tree.
+waive -rule STARC05-1.3.1.3 -du trex1_blue_autocorr -comment "rst_n also gates the is_tracking enable path in trex1_blue_autocorr -- safe, fully synchronous, glitch-free reset tree"
+
+
+# 5. Unconnected debug output ports (W287b)
+#    Debug observation ports intentionally unconnected -- synthesis will trim them.
+waive -rule W287b -du trex1_sync_hw_top -comment "Debug ports dbg_power_accum, dbg_shift_val, dbg_shift_dir intentionally unconnected"
+
+
+# 6. Set-but-not-read signals (W528)
+#    Mix of debug observation wires and reserved pipeline regs -- all trimmed by synthesis.
+waive -rule W528 -du iq_corrector_ll_lms -comment "s3_q_raw, s3_q_out: pipeline regs carried for symmetry, trimmed by synthesis"
+waive -rule W528 -du ddc_frontend_top -comment "cic_valid_q: Q-path valid mirrors I-path by construction, kept for symmetry"
+waive -rule W528 -du trex1_cfo_derotate -comment "dbg_raw_angle: ILA debug observation wire, not in functional datapath"
+waive -rule W528 -du trex1_farrow -comment "mu3: last Horner pipeline stage mu delay, unused by design"
+waive -rule W528 -du trex1_packet_engine_top -comment "pn9_state: reserved for future PN9 descrambler feature"
+waive -rule W528 -regexp -msg {SignalUsageReport} -comment "Informational pointer to report file -- all individual W528 signals already waived"
+
+
+# NOTE: Reset_sync04 (CDC rule, Open Item #5) is a CDC waiver and lives in
+# cdc_waivers.swl, NOT in this file.
+# History: during the 05-Jul-2026 archive review that file could not be located
+# (not on disk, not in the SpyGlass project's waiver state) and its status was
+# recorded here as UNRESOLVED / UNKNOWN.
+# Update: cdc_waivers.swl has since been located/restored. It carries the
+# Reset_sync04 waiver (-du trex1_blue_autocorr; mult_valid false positive on the
+# fine_estimator/coarse_discriminator instances) and documents an 18-Jul-2026
+# re-run against the current RTL (rst_n_sync synchronizer) + updated
+# baseband.sgdc (reset_synchronizer declaration) confirming it is the only
+# residual CDC/RDC flag, with all other goals (cdc_setup_check,
+# clock_reset_integrity, cdc_verify, rdc_verify_struct) clean. See cdc_waivers.swl.
+# Remaining checks before final archive:
+#   1. Confirm the SpyGlass project actually sources cdc_waivers.swl at runtime
+#      (file on disk != waiver loaded into project state).
+#   2. Confirm this install accepts the `-rules` (plural) form used in
+#      cdc_waivers.swl; this file's proven-working form is `-rule` (singular).

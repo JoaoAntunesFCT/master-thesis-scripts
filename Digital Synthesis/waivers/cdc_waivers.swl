@@ -1,0 +1,32 @@
+##################################################################################
+# Company:        NOVA SST
+# Engineer:       Joao Reis Antunes
+# 
+# Create Date:    07/2026 (mm-yyyy)
+# Module Name:    cdc_waivers.swl
+# Project Name:   TREX1 Digital Baseband Chain
+# Target Devices: Technology-independent (pre-synthesis RTL-level CDC check) 
+# Description:    SpyGlass CDC waiver file: waives the single residual Reset_sync04 false-positive on trex1_blue_autocorr, with the structural rationale for why it is not a real reset synchronizer.
+# 
+# Dependencies:   Rationale references the rst_n_meta/rst_n_sync 2-FF synchronizer declared via reset_synchronizer in baseband.sgdc. Loaded by the SpyGlass CDC project alongside baseband.sgdc.
+# 
+##################################################################################
+
+################################################################################
+# SpyGlass CDC Waiver File  trex1_rx_frontend_top
+# Syntax: SpyGlass .swl format (waive -rules -du -comment)
+################################################################################
+# Reset_sync04  mult_valid in trex1_blue_autocorr (instantiated as
+# fine_estimator and coarse_discriminator inside u_cfo) is an ordinary
+# valid-pulse register: async-clear via rst_n, simple synchronous set.
+# It structurally matches SpyGlass's synchronizer-detection heuristic
+# (async clear + simple set), which causes a false-positive "synchronized
+# more than once" flag between the two instances. It is not a reset
+# synchronizer. The actual reset synchronization for rst_n is handled by
+# the dedicated 2-FF rst_n_meta/rst_n_sync synchronizer in
+# trex1_rx_frontend_top.v, declared via `reset_synchronizer` in
+# baseband.sgdc. Verified 18-Jul-2026 against current RTL + SGDC
+# (post Open Item #5 implementation)  re-run confirmed this is the only
+# residual CDC/RDC flag; all other goals (cdc_setup_check,
+# clock_reset_integrity, cdc_verify, rdc_verify_struct) clean.
+waive -rules Reset_sync04 -du trex1_blue_autocorr -comment "mult_valid is an ordinary valid-pulse register (async clear, sync set), not a reset synchronizer -- structurally resembles one to SpyGlass's heuristic, causing a false-positive ambiguity between the fine_estimator and coarse_discriminator instances. Actual rst_n synchronization handled by the dedicated rst_n_meta/rst_n_sync 2-FF synchronizer in trex1_rx_frontend_top.v, declared in baseband.sgdc."
