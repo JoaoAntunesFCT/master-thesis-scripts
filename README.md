@@ -13,7 +13,7 @@ Sky130 / IHP130 PDKs) for the ASIC-oriented part of the thesis. The design
 was originally dimensioned assuming one ADC sample per clock edge at
 100 MHz; it was later discovered that the ADC actually delivers 10 MS/s (the
 Nexys A7's 100 MHz board oscillator had been mistaken for the ADC sample
-rate). The chain was re-clocked to 10 MHz to match — **this corrected
+rate). The chain was re-clocked to 10 MHz to match - **this corrected
 10 MHz / decimation-10 configuration is the one carried into both the final
 full-chain FPGA bring-up and the ASIC synthesis flow**; the original
 100 MHz / decimation-12 configuration survives only in the early, per-block
@@ -69,7 +69,7 @@ verified where.
 │   │   ├-- trex1_cfo_top.v                    # RTL: CFO estimation top
 │   │   ├-- trex1_blue_autocorr.v              # RTL: lag-1 autocorrelation + BLUE fine CFO estimator
 │   │   ├-- trex1_gardner.v                    # RTL: Gardner timing-error detector (linear interpolation)
-│   │   ├-- trex1_farrow.v                     # RTL: cubic Farrow interpolator (evaluated, not the one carried forward — see note below)
+│   │   ├-- trex1_farrow.v                     # RTL: cubic Farrow interpolator (evaluated, not the one carried forward - see note below)
 │   │   ├-- trex1_str_top.v                    # RTL: symbol-timing-recovery loop top
 │   │   ├-- trex1_sync_hw_top.v                # RTL: sync-chain top, instantiates the above
 │   │   ├-- nexys_a7_test_top.v                # standalone FPGA test harness for this block
@@ -170,34 +170,34 @@ verified where.
 ## Digital synthesis & verification
 
 `Digital_Synthesis/` targets the same RTL top (`trex1_rx_frontend_top`)
-across three ASIC PDKs — a generic/SAED14 educational reference, SkyWater
-Sky130, and IHP SG13G2 (130 nm) — using a common flow, at the corrected
+across three ASIC PDKs - a generic/SAED14 educational reference, SkyWater
+Sky130, and IHP SG13G2 (130 nm) - using a common flow, at the corrected
 10 MHz (100 ns period) rate:
 
-- **`synthesis/`** — Design Compiler multicorner synthesis scripts, one per
+- **`synthesis/`** - Design Compiler multicorner synthesis scripts, one per
   PDK. All three synthesize the same golden RTL and close setup/hold with
   zero negative slack; formal equivalence compare-point counts land in the
   same ~19,1xx range (19,112 / 19,112 / 19,118), with the small delta
   attributable to library/mapping differences rather than the RTL itself.
-- **`verification/`** — Formality RTL-vs-gate equivalence checking, one
+- **`verification/`** - Formality RTL-vs-gate equivalence checking, one
   script per PDK, using DC's SVF guidance to reconcile synthesis-introduced
   register merges/inversions. As the scripts themselves note, equivalence
   proves netlist == RTL; it does **not** prove that rate-dependent constants
   (CIC output shift, NCO `fcw`, decimation rate) are the functionally
-  *correct* values for the target clock — that's covered separately by
+  *correct* values for the target clock - that's covered separately by
   simulation (the `tb_rx_chain_model.m` cross-check and the 10 MS/s
   functional regression), not by equivalence checking.
-- **`constraints/`** — `baseband.sdc` (Design Compiler timing: 10 MHz,
+- **`constraints/`** - `baseband.sdc` (Design Compiler timing: 10 MHz,
   multicycle exceptions, I/O delays) and `baseband.sgdc` (SpyGlass CDC/RDC
   clock-and-reset facts).
-- **`waivers/`** — SpyGlass lint and CDC rule waivers, each with a written
+- **`waivers/`** - SpyGlass lint and CDC rule waivers, each with a written
   justification for why the flagged pattern is intentional/safe.
 
 > **Known constraint inconsistency:** `baseband.sdc`'s header states it was
 > updated to a 10 MHz / 100 ns clock period and that this is "numerically
 > identical" to `baseband.sgdc`'s definition. As currently committed,
 > `baseband.sgdc` still defines `clock -name clk -period 10.000` (i.e.
-> 10 ns / 100 MHz) — it was not actually updated to match. SpyGlass CDC
+> 10 ns / 100 MHz) - it was not actually updated to match. SpyGlass CDC
 > runs against the current `baseband.sgdc` are therefore checking the
 > 100 MHz clock definition, not 10 MHz. Worth reconciling before relying on
 > a SpyGlass CDC sign-off for the 10 MHz configuration.
@@ -205,7 +205,7 @@ Sky130, and IHP SG13G2 (130 nm) — using a common flow, at the corrected
 ## Schematics
 
 `Schematics/` holds the Vivado schematic PDFs for each block across the
-three implementation phases — elaboration, synthesis, and implementation —
+three implementation phases - elaboration, synthesis, and implementation -
 mirroring the block numbering used in `FPGA/`. These are the full-resolution
 originals: the copies embedded in the thesis PDF are cropped to their
 content and scaled to fit the page format, so the versions here are the
@@ -215,7 +215,7 @@ its own schematic annex in the thesis.
 
 ## MATLAB models
 
-- **`rx_chain_model.m`** — floating-point behavioural model of the full
+- **`rx_chain_model.m`** - floating-point behavioural model of the full
   chain, ported directly from the RTL (exact FIR/CIC scaling, exact PN9/
   CRC-16 polynomials, the full syndrome LUT, and the IQ corrector's DC-
   blocker silence-squelch fix). See the file header for the documented
@@ -224,7 +224,7 @@ its own schematic annex in the thesis.
   (the DDC→sync width truncation and the CIC's fixed output shift)
   reproduced exactly rather than approximated, since those materially
   affect the signal's shape, not just its timing.
-- **`tb_rx_chain_model.m`** — builds a continuous-tone, I/Q-imbalance-
+- **`tb_rx_chain_model.m`** - builds a continuous-tone, I/Q-imbalance-
   injected stimulus (mirroring the FPGA test wrapper's calibration bench)
   and runs it through both:
   - the **100 MHz / decimation-12 configuration** (the original,
