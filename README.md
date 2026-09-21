@@ -7,7 +7,9 @@ synchronization, GMSK demodulation, and packet-level error detection/
 correction, developed and cross-checked in MATLAB and implemented in
 Verilog/SystemVerilog RTL.
 
-The receiver was brought up and validated on a Nexys A7-100T (Artix-7) FPGA, and is separately targeted for digital synthesis (Design Compiler, SAED14 / Sky130 / IHP130 PDKs) for the ASIC-oriented part of the thesis. The design was first brought up on the FPGA at the board's native 100 MHz debug clock, taking one ADC sample per clock edge as a simplifying assumption for early validation, since the ADC's true throughput is 10 MS/s. Once FPGA validation was complete, the chain was re-clocked to 10 MHz to match the ADC — a low-risk step, since it only meant slowing the design down rather than tightening its timing. This 10 MHz / decimation-10 configuration is the one carried into both the final full-chain FPGA bring-up and the ASIC synthesis flow, while the earlier 100 MHz / decimation-12 configuration survives only as the early, per-block FPGA bring-up baseline.
+The receiver was brought up and validated on a Nexys A7-100T (Artix-7) FPGA, and is separately targeted for digital synthesis (Design Compiler, SAED14 / Sky130 / IHP130 PDKs) for the ASIC-oriented part of the thesis. The design was first brought up on the FPGA at the board's native 100 MHz debug clock, taking one ADC sample per clock edge as a simplifying assumption for early validation, since the ADC's true throughput is 10 MS/s. Once FPGA validation was complete, the chain was re-clocked to 10 MHz to match the ADC - a low-risk step, since it only meant slowing the design down rather than tightening its timing. This 10 MHz / decimation-10 configuration is the one carried into both the final full-chain FPGA bring-up and the ASIC synthesis flow, while the earlier 100 MHz / decimation-12 configuration survives only as the early, per-block FPGA bring-up baseline.
+
+<img width="1890" height="1138" alt="trex1_block_diagram" src="https://github.com/user-attachments/assets/b38014c7-9829-4c33-9c89-f31b3fc3e181" />
 
 ## Repository structure
 
@@ -42,10 +44,10 @@ The receiver was brought up and validated on a Nexys A7-100T (Artix-7) FPGA, and
 │
 ├-- Fpga/
 │   ├-- 1_iq/
+│   │   ├-- adc_format_aligner.v               # RTL: ADC bus alignment/sign-extension
 │   │   ├-- iq_corrector_ll_lms.sv             # RTL: I/Q imbalance corrector
 │   │   └-- fpga_top_tester.sv                 # standalone FPGA test harness for this block
 │   ├-- 2_ddc/
-│   │   ├-- adc_format_aligner.v               # RTL: ADC bus alignment/sign-extension
 │   │   ├-- ddc_nco_cmix.v                     # RTL: NCO + complex mixer
 │   │   ├-- ddc_fs4_mixer.v                    # RTL: fixed-Fs/4 mixer alternative
 │   │   ├-- cic_decimator_4th_order.v          # RTL: 4th-order CIC decimator
