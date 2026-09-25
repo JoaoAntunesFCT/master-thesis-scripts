@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use this code, please cite the thesis it was produced for."
+type: software
+title: "TREX1 - Digital Baseband Chain"
+authors:
+  - family-names: "Antunes"
+    given-names: "João"
+    affiliation: "NOVA University Lisbon, Department of Electrical and Computer Engineering"
+date-released: "2026-09-26"
+license: MIT
+repository-code: "https://github.com/JoaoAntunesFCT/master-thesis-scripts"
+keywords:
+  - FPGA
+  - digital baseband
+  - RTL
+  - signal processing
+  - symbol synchronization
+  - Verilog
+  - SystemVerilog
+preferred-citation:
+  type: thesis
+  title: "Design and Implementation of CMOS Low-Power Digital Baseband Chain"
+  authors:
+    - family-names: "Antunes"
+      given-names: "João"
+  institution:
+    name: "NOVA University Lisbon, Department of Electrical and Computer Engineering"
+  year: 2026
+  thesis-type: "Master's Dissertation (Master in Electrical and Computer Engineering, Specialization in Electronics and Digital Systems)"
+  notes: >
+    Dissertation supervised by João Pedro Oliveira (Assistant Professor, NOVA University Lisbon, Department of Electrical and Computer Engineering)
